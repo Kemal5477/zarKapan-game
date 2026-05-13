@@ -32,3 +32,6 @@ Canınız azaldığında seçerek belirli miktarda sağlık kazanabilirsiniz.
 
 ### Süre
 Süreniz azaldığında kullanabilirsiniz. Belirli ihtimallere bağlı olarak rastgele ek süre kazandırır.
+
+## Oyun Linki
+https://kemal5477.github.io/zarKapan-game/
