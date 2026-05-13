@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            /* Hünkarım, ekranın her yerini kullanabilmek için boşlukları sıfırladık */
+            body {
+                margin: 0;
+                overflow: hidden;
+                background-color: #f0f0f0;
+            }
+            #oyunAlani {
+                display: block; /* Hayalet boşlukları engeller */
+                cursor: url('resimler/asa22.png') 0 0, auto;
+            }
+        
+        </style>
+        
+<html>
+<body>
+    <canvas id="oyunAlani" style="border:2px solid #000; background-color: #f0f0f0;"></canvas>
+
+    <script>
+
+        const canvas = document.getElementById('oyunAlani');
+        const ctx = canvas.getContext('2d');
+
+        // --- SADECE BU KISIM EKLENDI: EKRAN AYARLARI ---
+        function ekranAyari() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', ekranAyari);
+        ekranAyari();
+
+        let bolumNo = 1 ;
+        let dusmanGuncelCan = 10 + (bolumNo-1) * 2 ;
+        let dusmanMaxCan = 10 + (bolumNo-1) * 2 ;
+        let oyuncuGuncelCan = 10 ;
+        let oyuncuMaxCan = 10 ;
+        let oyunDurumu = "MENU";
+        let gameTime = 60 * Math.pow((85/100),(bolumNo-1));
+        let startTimestamp = 0 ;
+        let lastTimestamp = 0 ;
+        let maxBarPx = 200 ;
+        let genelSesSeviyesi = 1 ;
+        let fareBasili = false ;
+        let fareKonum = { x: 0, y: 0 } ;
+
+        let geciciYazilar = []; // Uçuşan metinler burada saklanacak hünkarım
+
+        // Nesne özellikleri
+      function yeniNesneUret() {
+        let ozellikler=["Ateş","Su","Gürz","Can","Süre"];
+        let rastgele=Math.floor(Math.random()*5);
+    return {
+        // x aralığı: 600 + (0 ile 250 arası) = 600-850 arası
+        x: Math.floor(Math.random() *550 + 450),
+        // y aralığı: 450 + (0 ile 50 arası) = 450-500 arası
+        y: Math.floor(Math.random() * 240 + 360),
+        ozellik:ozellikler[rastgele],
+        genislik: 50,
+        yukseklik: 30,
+        hizX: 1 + ((bolumNo-1) * 0.2),
+        hizY: 1 + ((bolumNo-1) * 0.2)
+        
+    };
+}
+let nesneler = [];
+
+function nesneBittiMi(){
+            //Kutu kalmadığında ve düşmanın hala canı varsa oyunu bitirir.
+            if(nesneler.length === 0 && dusmanGuncelCan > 0 && oyunDurumu === "OYUN" && aktifMermiler.length === 0){
+                oyunDurumu = "GAMEOVER" ;
+                bolumNo = 1 ;
+                dusmanGuncelCan = 10 + (bolumNo - 1) * 2 ;
+                 dusmanMaxCan = 10 + (bolumNo - 1) * 2 ;
+                oyuncuGuncelCan = 10 ;
+                nesneler = [] ;
+                aktifMermiler = [] ;
+                saldırıAnimasyonuAktif = false;
+                mermi.ateslendiMi = false;
+                arkaPlanMuzigi.pause();
+                arkaPlanMuzigi.currentTime = 0;
+                }
+            }
+
+// Bu fonksiyonu her çağırdığınızda ekrana bir tane daha nesne eklenir
+function nesneEkle() {
+    let denemeLimit = 100; // Sonsuz döngüye girmemek için emniyet kilidi
+    let yeni;
+    let cakismaVar;
+
+    do {
+        yeni = yeniNesneUret();
+        cakismaVar = false;
+        
+        // Yeni doğan nesne, mevcut nesnelerden birinin üstüne mi biniyor?
+        for (let mevcut of nesneler) {
+            if (carpismaVarMi(yeni, mevcut)) {
+                cakismaVar = true;
+                break;
+            }
+        }
+        denemeLimit--;
+    } while (cakismaVar && denemeLimit > 0);
+
+    if (!cakismaVar) {
+        nesneler.push(yeni);
+    }
+}
+
+
+function carpismaVarMi(n1, n2) {
+    return n1.x < n2.x + n2.genislik &&
+           n1.x + n1.genislik > n2.x &&
+           n1.y < n2.y + n2.yukseklik &&
+           n1.y + n1.yukseklik > n2.y;
+}
+
+        let gucSecimi={
+          x:450,
+          y:350,
+          genislik:600,
+          yukseklik:300,
+          kalinlik:4,
+          renk:"blue"
+        }
+
+        const buyucuImg = new Image();
+        buyucuImg.src = "karakterler/büyücüNefes.png";
+
+        const buyucuImg1 = new Image();
+        buyucuImg1.src="karakterler/büyücüSaldırı1.png";
+
+        const buyucuImg2 = new Image();
+        buyucuImg2.src="karakterler/büyücüSaldırı2.png";
+
+        const buyucuImg3 = new Image();
+        buyucuImg3.src="karakterler/büyücüSaldırı3.png";
+
+        const buyucuImg4 = new Image();
+        buyucuImg4.src="karakterler/büyücüSaldırı4.png";
+
+        const megaKnight=new Image();
+        megaKnight.src="karakterler/megaKnight.png";
+
+        const mega1=new Image();
+        mega1.src="karakterler/mega1.png";
+
+        const mega2=new Image();
+        mega2.src="karakterler/mega2.png";
+
+        const su=new Image();
+        su.src="resimler/suTopu.png";
+
+        const alev=new Image();
+        alev.src="resimler/AlevTopu.png";
+
+        const gürz=new Image();
+        gürz.src="resimler/gürz.png";
+
+        const arkaPlan=new Image();
+        arkaPlan.src="resimler/arkaPlan.jpeg";
+
+        const fireBallSesi = new Audio('sesler/büyücüSesi.mp3');
+        const alevSesi = new Audio('sesler/alevTopuSesi.mp3');
+        const suSesi = new Audio('sesler/suSesi.mp3');
+        const suSesi2 = new Audio('sesler/suSesi2.mp3');
+        const bombaSesi=new Audio('sesler/bombaSesi.mp3');
+        const bombaSesi2=new Audio('sesler/bombaSesi2.mp3');
+        const saatSesi=new Audio('sesler/saatSesi.mp3');
+
+        const arkaPlanMuzigi = new Audio('sesler/arkaPlanSesi.mp3');
+        arkaPlanMuzigi.loop = true; // Müziğin sürekli dönmesini sağlar
+        let suSesleri=[suSesi,suSesi2];
+
+        const canSesi=new Audio('sesler/canSesi.mp3');
+
+        function sesGuncelle(){
+                fireBallSesi.volume = genelSesSeviyesi;
+                alevSesi.volume = genelSesSeviyesi;
+                canSesi.volume = genelSesSeviyesi;
+                bombaSesi.volume = genelSesSeviyesi;
+                bombaSesi2.volume = genelSesSeviyesi;
+                suSesi.volume = genelSesSeviyesi;
+                suSesi2.volume = genelSesSeviyesi;
+                arkaPlanMuzigi.volume = genelSesSeviyesi * 0.1;
+                canSesi.volume = genelSesSeviyesi;
+        }
+
+       const buyucuSaldırıKareleri = [buyucuImg1, buyucuImg2, buyucuImg3, buyucuImg4];
+       const megaSaldırıKareleri=[mega1,mega2];
+
+       let saldırıAnimasyonuAktif = false;
+       let mevcutKareIndeksi = 0;
+       let kareSayacı = 0;
+       const animasyonHizi = 12;
+
+       let megaMermiler = []; // Mega Knight'ın fırlattığı gürzler için yeni dizi
+       let megaSaldırıAnimasyonu = false;
+       let megaKareIndeksi = 0;
+       let megaKareSayaci = 0;
+
+
+
+        let mermi = {
+    x: 550,         // Başlangıç X (Büyücünün yanı)
+    y: 241,         // Başlangıç Y
+    hiz: 4,         // Sağa doğru kaç piksel kaysın?
+    genislik: 50,   // Görselin canvas'taki genişliği
+    yukseklik: 42,  // Görselin canvas'taki yüksekliği
+    ateslendiMi: false,
+    hangiMermi: undefined
+    
+};
+
+let aktifMermiler = [];
+
+let nesnelerr = new Array("Ateş","Su","Gürz","Can","Süre");
+let secim ;
+
+canvas.addEventListener('contextmenu', function(ee) { //Sağ tık dinleyen eleman burda
+    ee.preventDefault() ;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = ee.clientX - rect.left;
+    const mouseY = ee.clientY - rect.top;
+    if (oyunDurumu === "OYUN") {
+        nesneler.forEach((nesne, i)  => {
+        if ((mouseX > nesne.x && mouseX < nesne.x + nesne.genislik) && (mouseY > nesne.y && mouseY < nesne.y + nesne.yukseklik)) {
+            do{
+            secim = Math.floor(Math.random()*5) ;
+            }
+            while(nesne.ozellik === nesnelerr[secim]);
+            nesne.ozellik = nesnelerr[secim] ;
+        }
+    })
+    }
+})
+
+canvas.addEventListener('mousedown', function(e) {
+
+        if (e.button !== 0) return;
+         // 1. Fare koordinatlarını canvas'a göre hesapla
+           const rect = canvas.getBoundingClientRect();
+           const mouseX = e.clientX - rect.left;
+           const mouseY = e.clientY - rect.top;
+
+        if (oyunDurumu === "MENU") {
+        if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+        mouseY > 300 && mouseY < 360) {
+
+        arkaPlanMuzigi.play();
+        
+        // Eğer nesneler dizisi boşsa (yani oyun hiç başlamamışsa veya yeni bölüme geçilmişse) ilk kurulumu yap
+        if (nesneler.length === 0) {
+            gameTime = 60 * Math.pow((85 / 100), (bolumNo - 1));
+            for (let i = 0; i < 10; i++) {
+                nesneEkle();
+            }
+        }
+        
+        // Zamanlayıcıyı sıfırla ki süre kaldığı yerden aksın (atlama yapmasın)
+        lastTimestamp = 0; 
+        oyunDurumu = "OYUN";
+    }
+            else if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+            mouseY > 400 && mouseY < 460) {
+                oyunDurumu = "TUTORIAL" ;
+            }
+            else if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+            mouseY > 500 && mouseY < 560) {
+                oyunDurumu = "AYARLAR" ;
+            }
+
+        }
+
+        else if (oyunDurumu === "AYARLAR") {
+            if (mouseX > canvas.width / 2 - 150 && mouseX < canvas.width / 2 + 150 &&
+            mouseY > 400 && mouseY < 430) {
+                genelSesSeviyesi = (mouseX - (canvas.width / 2 - 150)) / 300 ;
+            }
+            else if (mouseX > canvas.width / 2 - 150 && mouseX < canvas.width / 2 + 150 &&
+            mouseY > 500 && mouseY < 560) {
+                oyunDurumu = "MENU" ;
+            }
+            sesGuncelle() ;
+        }
+
+        else if (oyunDurumu === "TUTORIAL") {
+    // "ANLAŞILDI" butonuna basıldı mı kontrolü
+    if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+        mouseY > 610 && mouseY < 680) {
+        oyunDurumu = "MENU";
+    }
+}
+
+
+        else if (oyunDurumu === "OYUN") {
+            // SAĞ ÜST MENÜ BUTONU TIKLAMA KONTROLÜ
+           // OYUN İÇİ SAĞ ÜST MENÜ BUTONU TIKLAMA KONTROLÜ
+           if (mouseX > canvas.width - 120 && mouseX < canvas.width - 20 &&
+           mouseY > 20 && mouseY < 60) {
+           oyunDurumu = "MENU";
+           arkaPlanMuzigi.pause();
+          // Verileri sıfırlayan nesneler = []; vb. satırları buradan SİLDİK hünkarım.
+          return; 
+}
+
+        nesneler.forEach((nesne, i)  => {
+        if ((mouseX > nesne.x && mouseX < nesne.x + nesne.genislik) && (mouseY > nesne.y && mouseY < nesne.y + nesne.yukseklik)) {
+        if (nesne.ozellik === "Ateş" || nesne.ozellik === "Su") {
+        // Her tıklamada yeni bir mermi objesi oluşturup diziye ekliyoruz
+        aktifMermiler.push({
+        x: 550,
+        y: 241,
+        hiz: 6,
+        genislik: 50,
+        yukseklik: 42,
+        tip: nesne.ozellik // Hangi görselin çizileceğini burada tutuyoruz
+    });
+
+    // Büyücü animasyonunu da başlatalım hünkarım
+    saldırıAnimasyonuAktif = true;
+    mevcutKareIndeksi = 0;
+    // Nesneyi de siliyoruz
+    nesneler.splice(i, 1);
+    nesneBittiMi();
+    }
+if(nesne.ozellik==="Ateş"){
+    fireBallSesi.currentTime=0;
+    fireBallSesi.play();
+    alevSesi.playbackRate =2.0;
+    alevSesi.play();
+}
+else if(nesne.ozellik==="Su"){
+    let hangiSes=Math.floor(Math.random()*2);
+    let buSes=suSesleri[hangiSes];
+    buSes.currentTime=0;
+    buSes.play();
+}
+else if(nesne.ozellik==="Gürz"){
+    bombaSesi.currentTime=0;
+    bombaSesi.play();
+    
+    // Mega Knight animasyonunu başlatıyoruz hünkarım
+    megaSaldırıAnimasyonu = true;
+    megaKareIndeksi = 0;
+    
+    // Mega Knight'ın gürzünü oluşturup büyücüye doğru fırlatıyoruz
+    megaMermiler.push({
+        x: gucSecimi.x + 500, // Mega Knight'ın konumu
+        y: gucSecimi.y - 100,
+        hiz: -7, // Sola, büyücüye doğru
+        genislik: 40,
+        yukseklik: 40
+    });
+
+    nesneler.splice(i,1) ;
+    nesneBittiMi();
+}
+
+else if(nesne.ozellik === "Süre") {
+    saatSesi.currentTime = 0;
+    saatSesi.play();
+
+    let artmiktar = 0;
+    let olasilik = Math.floor(Math.random() * 100);
+
+    if (olasilik < 50) artMiktar = 3;
+    else if (olasilik < 80) artMiktar = 5;
+    else artMiktar = 10;
+
+    gameTime += artMiktar;
+
+    // Yazıyı listeye ekliyoruz hünkarım
+    geciciYazilar.push({
+        metin: "+" + artMiktar,
+        x: canvas.width / 2,
+        y: 80,
+        omur: 60, // 60 kare (yaklaşık 1 saniye) görünecek
+        opasite: 1
+    });
+
+    nesneler.splice(i, 1); // Butonun kaybolmasını sağlayan satır budur
+    nesneBittiMi();
+}
+
+else if(nesne.ozellik==="Can" && oyuncuGuncelCan < oyuncuMaxCan){   
+    canSesi.currentTime=0;
+    canSesi.play();
+    oyuncuGuncelCan += 1 ;
+    nesneler.splice(i,1) ;
+    nesneBittiMi();
+}
+
+    }
+    })
+        }
+        else if(oyunDurumu === "LEVELUP"){
+            if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+            mouseY > 300 && mouseY < 360) {
+            oyunDurumu = "OYUN";
+            gameTime = 60 * Math.pow((85/100),(bolumNo-1)) ;
+            lastTimestamp = 0 ;
+            startTimestamp = 0 ;
+             for(let i=0; i<10; i++) {
+                nesneEkle();
+            }
+
+            }
+        }
+        else if(oyunDurumu === "GAMEOVER"){
+            if (mouseX > canvas.width / 2 - 100 && mouseX < canvas.width / 2 + 100 &&
+            mouseY > 300 && mouseY < 360) {
+            oyunDurumu = "MENU";
+            gameTime = 60 * Math.pow((85/100),(bolumNo-1)) ;
+            lastTimestamp = 0 ;
+            startTimestamp = 0 ;
+            }
+        }
+
+
+})
+
+
+    canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    // Koordinatları canvas'ın gerçek ölçeğine göre normalize ediyoruz
+    fareKonum.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    fareKonum.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+});
+
+
+
+
+
+        function ciz(timestamp) {
+
+            //süre işlemleri
+            if(lastTimestamp === 0){
+                lastTimestamp = timestamp ;
+                requestAnimationFrame(ciz) ;
+                return ;
+            }
+            if (!startTimestamp) startTimestamp = timestamp ;
+            let delta = timestamp - lastTimestamp ;
+            delta = Math.min(delta, 50); // Delta guard: Aşırı yüksek delta değerlerini sınırlayarak titremeyi ve ışınlanmayı engeller
+            lastTimestamp = timestamp ;
+
+            if (oyunDurumu === "OYUN"){
+                gameTime -= delta / 1000;
+            }
+            //süre işlemleri bitiş
+
+            function butonAyarla(x, y, gen, yuk) {
+              // 1. Durum Kontrolü (Hitbox)
+             let hover = fareKonum.x > x && fareKonum.x < x + gen && 
+                fareKonum.y > y && fareKonum.y < y + yuk;
+    
+             let active = hover && fareBasili;
+
+              if (active) {
+                ctx.fillStyle = "#A04000";
+              } else if (hover) {
+                ctx.fillStyle = "#FF7043";  
+                }
+            }
+
+            // 1. Ekranı temizle (arka planı her karede yeniden boyuyoruz)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(arkaPlan, 0, 0, canvas.width, canvas.height);
+
+            function anaMenuCiz() {
+            // Arka planı hafif karartalım (veya bir resim koyabilirsin)
+             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Başlık
+             ctx.fillStyle = "white";
+             ctx.font = "60px Sans";
+             ctx.textAlign = "center";
+             ctx.fillText("ZarKapan", canvas.width / 2, 200);
+
+            // Başlat Butonu Alanı
+             ctx.fillStyle = "#E25822";
+             ctx.beginPath();
+             ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60, 8); 
+             butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60);
+             ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "white";
+             ctx.font = "20px Arial";
+             ctx.fillText("OYNA", canvas.width / 2, 340);
+
+            //Tutorial Butonu Alanı
+            ctx.fillStyle = "#E25822";
+            ctx.beginPath();
+            ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(400), 200, 60, 8);
+            butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(400), 200, 60);
+            ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "white";
+             ctx.font = "20px Arial";
+             ctx.fillText("Tutorial", canvas.width / 2, 440);
+            
+            //Ayarlar Butonu Alanı
+            ctx.fillStyle = "#E25822";
+            ctx.beginPath();
+            ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(500), 200, 60, 8);
+            butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(500), 200, 60);
+            ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "white";
+             ctx.font = "20px Arial";
+             ctx.fillText("Ayarlar", canvas.width / 2, 540);
+            }
+            
+            function ayarlarCiz(){
+            //Ses değiştirme için
+            ctx.fillStyle = "red";
+            ctx.beginPath();
+            ctx.roundRect(Math.round(canvas.width / 2 - 150), Math.round(400), 300, 30, 8);
+            ctx.fill();
+
+
+            ctx.fillStyle = "blue";
+            ctx.beginPath();
+            ctx.roundRect(Math.round(canvas.width / 2 - 150), Math.round(400), 300 * genelSesSeviyesi , 30, 8);
+            ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "green";
+             ctx.font = "20px Arial";
+             ctx.textAlign = "center";
+             ctx.fillText("Ses Seviyesi", canvas.width / 2, 380);
+
+             ctx.font = "20px Arial bold";
+             ctx.fillText("%" + Math.round(genelSesSeviyesi * 100), canvas.width / 2, 422);
+
+             //Geri dönme butonu
+             ctx.fillStyle = "#E25822";
+             ctx.beginPath();
+             ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(500), 200, 60, 8);
+             butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(500), 200, 60);
+             ctx.fill();
+
+
+             ctx.fillStyle = "black";
+             ctx.font = "25px Arial";
+             ctx.textAlign = "center";
+             ctx.fillText("GERİ DÖN", canvas.width / 2, 540);
+
+            }
+
+            
+
+            function tutorialCiz() {
+    // Arka planı hafif karart
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Ana Panel
+    ctx.strokeStyle = "#E25822";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(200, 50, canvas.width - 400, canvas.height - 100);
+    ctx.fillStyle = "rgba(30, 30, 30, 0.9)";
+    ctx.fillRect(200, 50, canvas.width - 400, canvas.height - 100);
+
+    // Başlık
+    ctx.fillStyle = "#E25822";
+    ctx.font = "bold 45px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("NASIL OYNANIR?", canvas.width / 2, 100);
+
+    ctx.textAlign = "left";
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "white";
+
+    const baslangicX = 250;
+    const baslangicY = 170;
+    const satirAraligi = 60;
+
+    // Talimatlar ve İkonlar
+    const talimatlar = [
+        { metin: "SOL TIK: Kutulara tıklayarak büyücüye büyü yaptırın veya can kazanın.", renk: "white" },
+        { metin: "SAĞ TIK: Hareket eden kutunun özelliğini rastgele değiştirin.", renk: "#00C9FF" },
+        { metin: "ATEŞ & SU: Düşmana saldırır. Ateş daha çok hasar verir.", renk: "#FF4500" },
+        { metin: "GÜRZ: Mega Knight size gürz fırlatır! Dikkat edin.", renk: "#C4A484" },
+        { metin: "CAN: Eğer canınız azsa size +1 can verir.", renk: "#FF0000" },
+        { metin: "SÜRE: Süren azaldıysa bu özelliği seçerek %50 ihtimalle +3, %30 ihtimalle +5, %20 ihtimalle +10 saniye kazanabilirsin.",renk:"aqua"}
+    ];
+
+    talimatlar.forEach((t, i) => {
+        // Madde işareti/Simge
+        ctx.fillStyle = t.renk;
+        ctx.beginPath();
+        ctx.arc(baslangicX, Math.round(baslangicY + (i * satirAraligi) - 7), 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Metin
+        ctx.fillStyle = "white";
+        ctx.fillText(t.metin, baslangicX + 30, Math.round(baslangicY + (i * satirAraligi)));
+    });
+
+    // Alt Bilgi
+    ctx.font = "italic 18px Arial";
+    ctx.fillStyle = "#aaa";
+    ctx.textAlign = "center";
+    ctx.fillText("Unutmayın , süre bitmeden düşmanı alt etmelisiniz!", canvas.width / 2, canvas.height - 120);
+
+    // Geri Dön Butonu
+    ctx.fillStyle = "#E25822";
+    ctx.beginPath();
+    ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(canvas.height - 100), 200, 50, 8);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("ANLAŞILDI", canvas.width / 2, canvas.height - 68);
+}
+
+            
+            function levelupEkraniCiz(){
+             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Başlık
+             ctx.fillStyle = "white";
+             ctx.font = "60px Sans";
+             ctx.textAlign = "center";
+             ctx.fillText("Bölüm Geçildi!", canvas.width / 2, 200);
+
+            // Başlat Butonu Alanı
+             ctx.fillStyle = "#E25822";
+             ctx.beginPath();
+             ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60, 8);
+             butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60);
+             ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "white";
+             ctx.font = "20px Arial";
+             ctx.fillText("Devam Et", canvas.width / 2, 340);
+            }
+
+            function gameoverEkraniCiz(){
+             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Başlık
+             ctx.fillStyle = "white";
+             ctx.font = "60px Sans";
+             ctx.textAlign = "center";
+             ctx.fillText("OYUN BİTTİ", canvas.width / 2, 200);
+
+             ctx.fillStyle = "#E25822";
+             ctx.beginPath();
+             ctx.roundRect(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60, 8);
+             butonAyarla(Math.round(canvas.width / 2 - 100), Math.round(300), 200, 60);
+             ctx.fill();
+
+            // Buton Yazısı
+             ctx.fillStyle = "white";
+             ctx.font = "20px Arial";
+             ctx.fillText("Ana Menü", canvas.width / 2, 340);
+
+             ctx.fillStyle = "white";
+             ctx.font = "15px Arial";
+             ctx.fillText("Toplam Skor: " + (bolumNo-1) , canvas.width / 2, 290);
+
+            }
+
+            if (oyunDurumu === "MENU") {
+                anaMenuCiz();
+            } 
+
+            else if (oyunDurumu === "TUTORIAL") {
+                tutorialCiz() ;
+            }
+
+            else if (oyunDurumu === "AYARLAR") {
+                ayarlarCiz() ;
+            }
+
+            else if (oyunDurumu === "OYUN") {
+              
+
+                ctx.fillStyle = "white";
+                ctx.font = "40px Sans italic";
+                ctx.fillText("Bölüm " + bolumNo, 90, 50);
+
+                // OYUN İÇİ SAĞ ÜST MENÜ BUTONU ÇİZİMİ
+                ctx.fillStyle = "#E25822";
+                ctx.beginPath();
+                ctx.roundRect(canvas.width - 120, 20, 100, 40, 5);
+                butonAyarla(canvas.width - 120, 20, 100, 40);
+                ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.font = "bold 18px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("MENÜ", canvas.width - 70, 47);
+
+                //süre biterse
+                if (gameTime <= 0) {
+                gameTime = 0 ;
+                bolumNo = 1 ;
+                oyunDurumu = "GAMEOVER"
+                dusmanGuncelCan = 10 + (bolumNo - 1) * 2 ;
+                dusmanMaxCan = 10 + (bolumNo - 1) * 2 ;
+                oyuncuGuncelCan = 10 ;
+                aktifMermiler = [] ;
+                nesneler = [] ;
+                startTimestamp = 0 ;
+                saldırıAnimasyonuAktif = false;
+                mermi.ateslendiMi = false;
+            }
+                //süreyi göstermek için
+                ctx.fillStyle = gameTime < 10 ? "red" : "black"; // Son 10 saniye uyarı rengi
+                ctx.font = "bold 40px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(Math.ceil(gameTime), canvas.width / 2, 50);
+
+                // Geçici yazıları çizdirme ve güncelleme hünkarım
+                geciciYazilar.forEach((yazi, index) => {
+                ctx.save(); // Mevcut ayarları kaydet
+                ctx.globalAlpha = yazi.opasite;
+                ctx.fillStyle = "#32CD32";
+                ctx.font = "bold 50px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(yazi.metin, yazi.x, yazi.y);
+                ctx.restore(); // Ayarları geri yükle
+
+    // Yazıyı hafifçe yukarı kaydır ve şeffaflaştır
+    yazi.y -= 0.5;
+    yazi.omur -= 1;
+    yazi.opasite -= 0.015;
+
+    // Ömrü bitince diziden sil
+    if (yazi.omur <= 0) {
+        geciciYazilar.splice(index, 1);
+    }
+});
+
+               
+
+                //can barları için
+                ctx.fillStyle = "white";
+                ctx.fillRect(Math.round(gucSecimi.x - 60), Math.round(gucSecimi.y - 250), maxBarPx, 20);
+                ctx.strokeRect(Math.round(gucSecimi.x - 60), Math.round(gucSecimi.y - 250), maxBarPx, 20);
+
+                ctx.fillStyle = "green";
+                ctx.fillRect(Math.round(gucSecimi.x - 60), Math.round(gucSecimi.y - 250), (oyuncuGuncelCan / oyuncuMaxCan)*maxBarPx , 20);
+
+                ctx.fillStyle = "white";
+                ctx.fillRect(Math.round(gucSecimi.x + 520), Math.round(gucSecimi.y - 290), maxBarPx, 20);
+                ctx.strokeRect(Math.round(gucSecimi.x + 520), Math.round(gucSecimi.y - 290), maxBarPx, 20);
+
+                ctx.fillStyle = "red";
+                ctx.fillRect(Math.round(gucSecimi.x + 520), Math.round(gucSecimi.y - 290), (dusmanGuncelCan / dusmanMaxCan)*maxBarPx , 20);
+                //can barı bitiş
+
+                ctx.beginPath()
+                ctx.rect(Math.round(gucSecimi.x),Math.round(gucSecimi.y),gucSecimi.genislik,gucSecimi.yukseklik);
+                ctx.strokeStyle = gucSecimi.renk;
+                ctx.lineWidth = gucSecimi.kalinlik;
+                ctx.stroke();
+
+            let gosterilecekResim = buyucuImg; // Varsayılan: normal duruş
+
+    if (saldırıAnimasyonuAktif) {
+        gosterilecekResim = buyucuSaldırıKareleri[mevcutKareIndeksi];
+    
+        kareSayacı += (delta / 6.94) ;
+
+        if (kareSayacı >= animasyonHizi) {
+            mevcutKareIndeksi++;
+            kareSayacı = 0;
+        }
+
+        // --- MERMİYİ FIRLATMA ANI ---
+        // Diyelim ki 3. karede (index 2) büyücü elini ileri uzatıyor:
+        if (mevcutKareIndeksi === 2 && !mermi.ateslendiMi) {
+            mermi.ateslendiMi = true;
+        }
+
+        // Animasyon bittiğinde (Tüm kareler dönünce):
+        if (mevcutKareIndeksi >= buyucuSaldırıKareleri.length) {
+            saldırıAnimasyonuAktif = false;
+            mevcutKareIndeksi = 0;
+        }
+    }
+
+    // Büyücüyü Çiz (Yuvarlanmış koordinatlar titremeyi önler)
+    ctx.drawImage(gosterilecekResim, Math.round(gucSecimi.x - 50), Math.round(gucSecimi.y - 200), 160, 204);
+        
+    let megaGosterilecek = megaKnight;
+    if (megaSaldırıAnimasyonu) {
+        megaGosterilecek = megaSaldırıKareleri[megaKareIndeksi];
+        megaKareSayaci += (delta / 6.94) ;
+        if (megaKareSayaci >= animasyonHizi) {
+            megaKareIndeksi++;
+            megaKareSayaci = 0;
+        }
+        if (megaKareIndeksi >= megaSaldırıKareleri.length) {
+            megaSaldırıAnimasyonu = false;
+            megaKareIndeksi = 0;
+        }
+    }
+    ctx.drawImage(megaGosterilecek, Math.round(gucSecimi.x + 450), Math.round(gucSecimi.y - 240), 322, 268);
+
+    // Mega Knight'ın fırlattığı gürzlerin hareketi ve çarpışması
+    megaMermiler.forEach((gm, gIndex) => {
+        gm.x += gm.hiz * (delta / 6.94) ;
+        
+        // Gürz görselini çiziyoruz (Yuvarlanmış koordinat)
+        ctx.drawImage(gürz, Math.round(gm.x), Math.round(gm.y), 100, 100);
+
+        // Büyücü ile çarpışma kontrolü
+        let bX = gucSecimi.x - 50;
+        let bY = gucSecimi.y - 200;
+        
+        if (gm.x < bX + 160 && gm.x + gm.genislik > bX &&
+            gm.y < bY + 204 && gm.y + gm.yukseklik > bY) {
+            bombaSesi2.play() ;
+            oyuncuGuncelCan -= 3; // Hasarı burada uyguluyoruz hünkarım
+            megaMermiler.splice(gIndex, 1); // Çarpınca kaybolur
+        }
+
+        // Ekrandan çıkarsa sil
+        if (gm.x < 0) megaMermiler.splice(gIndex, 1);
+    });
+
+    aktifMermiler.forEach((m, indeks) => {
+        m.x += m.hiz * (delta / 6.94); // Her mermi kendi hızıyla gider
+
+        // Tipine göre doğru görseli seçelim
+        let gorsel = alev;
+        if (m.tip === "Su") gorsel = su;
+
+        ctx.drawImage(gorsel, Math.round(m.x), Math.round(m.y), m.genislik, m.yukseklik);
+
+        // MEGA KNIGHT ÇARPIŞMA KONTROLÜ
+        let mkX = gucSecimi.x + 500;
+        let mkY = gucSecimi.y - 240;
+        
+        if (m.x < mkX + 322 && m.x + m.genislik > mkX &&
+            m.y < mkY + 268 && m.y + m.yukseklik > mkY) {
+
+        if (m.tip === "Ateş") {
+            dusmanGuncelCan -= 5;   
+        } else if (m.tip === "Su") {
+            dusmanGuncelCan -= 2; //
+        }
+
+
+            // Çarpışan mermiyi diziden siliyoruz hünkarım
+            aktifMermiler.splice(indeks, 1);
+            nesneBittiMi();
+        }
+
+        // Ekrandan çıkan mermiyi temizleyelim
+        if (m.x > canvas.width) {
+            aktifMermiler.splice(indeks, 1);
+            nesneBittiMi();
+            
+        }
+    });
+
+            nesneler.forEach((n1, hangi) => {
+        // Çizim
+        if(n1.ozellik==="Ateş"){
+          ctx.fillStyle = "#E25822";
+        }
+        else if(n1.ozellik==="Su"){
+          ctx.fillStyle="aqua";
+        }
+        else if(n1.ozellik==="Gürz"){
+          ctx.fillStyle="#C4A484";
+        }
+        else if(n1.ozellik==="Can"){
+          ctx.fillStyle="red";
+        }
+        else if(n1.ozellik==="Süre"){
+            ctx.fillStyle="#32CD32";
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(Math.round(n1.x), Math.round(n1.y), n1.genislik, n1.yukseklik, 8);
+        ctx.fill();
+
+        ctx.fillStyle = "black"; // Yazı rengi (zıt renk olması iyi olur)
+        ctx.font = "bold 14px Arial"; // Yazı tipi ve boyutu
+        ctx.textAlign = "center"; // Yazıyı merkeze hizalar
+    
+    // Yazıyı nesnenin tam ortasına konumlandırmak için:
+    // x: nesne.x + (genislik / 2)
+    // y: nesne.y + (yukseklik / 2) + 5 (5 piksel aşağı kaydırdık ki tam ortalansın)
+       ctx.fillText(n1.ozellik, Math.round(n1.x + (n1.genislik / 2)), Math.round(n1.y + (n1.yukseklik / 2) + 5));
+
+        // Hareket hızı
+        n1.x += n1.hizX * (delta / 6.94) ;
+        n1.y += n1.hizY * (delta / 6.94) ;
+
+        // Çarpma Kontrolü ve Pozisyon Düzeltme
+// X ekseni kontrolü
+if (n1.x < gucSecimi.x) {
+    n1.hizX = Math.abs(n1.hizX); // Kesinlikle sağa git
+    n1.x = gucSecimi.x; // Kenara sabitle
+} else if (n1.x + n1.genislik > gucSecimi.x + gucSecimi.genislik) {
+    n1.hizX = -Math.abs(n1.hizX); // Kesinlikle sola git
+    n1.x = (gucSecimi.x + gucSecimi.genislik) - n1.genislik; // Kenara sabitle
+}
+
+// Y ekseni kontrolü
+if (n1.y < gucSecimi.y) {
+    n1.hizY = Math.abs(n1.hizY); // Kesinlikle aşağı git
+    n1.y = gucSecimi.y; // Kenara sabitle
+} else if (n1.y + n1.yukseklik > gucSecimi.y + gucSecimi.yukseklik) {
+    n1.hizY = -Math.abs(n1.hizY); // Kesinlikle yukarı git
+    n1.y = (gucSecimi.y + gucSecimi.yukseklik) - n1.yukseklik; // Kenara sabitle
+}
+
+        for (let i = hangi + 1; i < nesneler.length; i++) {
+        let n2 = nesneler[i];
+
+    if (carpismaVarMi(n1, n2)) {
+        // Merkezler arası mesafeyi hesapla
+        let dx = (n1.x + n1.genislik / 2) - (n2.x + n2.genislik / 2);
+        let dy = (n1.y + n1.yukseklik / 2) - (n2.y + n2.yukseklik / 2);
+
+        // Toplam genişlik ve yüksekliğin yarısı (çakışma sınırı)
+        let genislikToplam = (n1.genislik + n2.genislik) / 2;
+        let yukseklikToplam = (n1.yukseklik + n2.yukseklik) / 2;
+
+        // Ekselerdeki çakışma (overlap) miktarı
+        let ox = genislikToplam - Math.abs(dx);
+        let oy = yukseklikToplam - Math.abs(dy);
+
+        if (ox >= oy) {
+            // Y ekseninde çarpışma (üstten veya alttan)
+            n1.hizY *= -1;
+            n2.hizY *= -1;
+            
+            // Üst üste binmeyi önlemek için pozisyon düzeltme
+            if (dy > 0) n1.y += oy; else n1.y -= oy;
+        } else {
+            // X ekseninde çarpışma (sağdan veya soldan)
+            n1.hizX *= -1;
+            n2.hizX *= -1;
+            
+            // Üst üste binmeyi önlemek için pozisyon düzeltme
+            if (dx > 0) n1.x += ox; else n1.x -= ox;
+        }
+    }
+    }
+    });
+}
+        else if (oyunDurumu === "LEVELUP") {
+            levelupEkraniCiz() ;
+        }
+
+        else if (oyunDurumu === "GAMEOVER") {
+            gameoverEkraniCiz() ;
+        }
+
+
+
+
+        if(dusmanGuncelCan <= 0){
+            bolumNo += 1 ;
+            oyunDurumu = "LEVELUP"
+            dusmanGuncelCan = 10 + (bolumNo - 1) * 2 ;
+            dusmanMaxCan = 10 + (bolumNo - 1) * 2 ;
+            oyuncuGuncelCan = 10 ;
+            nesneler = [] ;
+            aktifMermiler = [] ;
+            saldırıAnimasyonuAktif = false;
+            mermi.ateslendiMi = false;
+            //LEVELUP EKRANI
+        }
+        if(oyuncuGuncelCan <= 0){
+            bolumNo = 1 ;
+            oyunDurumu = "GAMEOVER"
+            dusmanGuncelCan = 10 + (bolumNo - 1) * 2 ;
+            dusmanMaxCan = 10 + (bolumNo - 1) * 2 ;
+            oyuncuGuncelCan = 10 ;
+            aktifMermiler = [] ;
+            saldırıAnimasyonuAktif = false;
+            mermi.ateslendiMi = false;
+            arkaPlanMuzigi.pause();
+            arkaPlanMuzigi.currentTime = 0;
+            //GAME OVER EKRANI
+        }
+
+            // Döngüyü devam ettir
+            requestAnimationFrame(ciz);
+
+            
+        }
+        
+        
+        // Animasyonu başlat
+        ciz();
+    </script>
+</body>
+</html>
+
+
+</head>
+ <body >
+
+ </body>
+
+
+</html>
